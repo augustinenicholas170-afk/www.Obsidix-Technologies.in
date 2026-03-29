@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>QR Attendance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;}
+
+  /* ── ADMIN PAGE ── */
+  #admin-page{display:flex;flex-direction:column;align-items:center;padding:30px 20px;gap:24px;}
+  .admin-title{font-size:1.4rem;font-weight:700;color:#38bdf8;letter-spacing:-0.5px;}
+  .admin-sub{font-size:0.8rem;color:#64748b;margin-top:4px;text-align:center;}
+  .qr-box{background:#fff;padding:14px;border-radius:16px;box-shadow:0 0 40px rgba(56,189,248,0.2);}
+  .qr-info{font-size:0.75rem;color:#475569;text-align:center;max-width:260px;}
+  .admin-btn{background:#38bdf8;color:#0f172a;border:none;padding:12px 28px;border-radius:12px;font-size:0.9rem;font-weight:700;cursor:pointer;width:100%;max-width:280px;}
+  .admin-btn:hover{background:#7dd3fc;}
+  .admin-btn.outline{background:transparent;border:1px solid #334155;color:#94a3b8;}
+  .admin-btn.outline:hover{border-color:#38bdf8;color:#38bdf8;}
+  .url-input{width:100%;max-width:320px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 14px;color:#e2e8f0;font-size:0.82rem;outline:none;}
+  .url-input:focus{border-color:#38bdf8;}
+  .label{font-size:0.72rem;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;align-self:flex-start;max-width:320px;width:100%;}
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:320px;}
+  .stat{background:#1e293b;border-radius:10px;padding:12px;text-align:center;}
+  .stat .n{font-size:1.4rem;font-weight:700;}
+  .stat .l{font-size:0.68rem;color:#64748b;margin-top:2px;}
+  .n.green{color:#34d399;} .n.red{color:#f87171;} .n.blue{color:#60a5fa;}
+
+  /* ── MOBILE FORM PAGE ── */
+  #form-page{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px 20px;gap:20px;}
+  .form-card{background:#1e293b;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:18px;border:1px solid #334155;}
+  .form-title{font-size:1.2rem;font-weight:700;color:#38bdf8;text-align:center;}
+  .form-sub{font-size:0.78rem;color:#64748b;text-align:center;margin-top:-10px;}
+  .num-input{background:#0f172a;border:2px solid #334155;border-radius:14px;padding:18px;font-size:2.5rem;font-weight:700;color:#38bdf8;text-align:center;width:100%;outline:none;font-family:'Segoe UI',sans-serif;}
+  .num-input:focus{border-color:#38bdf8;}
+  .student-box{background:#0f172a;border-radius:10px;padding:14px;min-height:52px;display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid #1e293b;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#818cf8);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;color:#0f172a;flex-shrink:0;}
+  .s-name{font-weight:600;font-size:0.9rem;}
+  .s-roll{font-size:0.72rem;color:#64748b;margin-top:2px;}
+  .type-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .type-btn{padding:12px 6px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:#64748b;font-size:0.78rem;font-weight:600;cursor:pointer;text-align:center;}
+  .type-btn.sel-in{background:rgba(52,211,153,0.15);border-color:#34d399;color:#34d399;}
+  .type-btn.sel-out{background:rgba(248,113,113,0.15);border-color:#f87171;color:#f87171;}
+  .type-btn.sel-break{background:rgba(251,191,36,0.15);border-color:#fbbf24;color:#fbbf24;}
+  .submit-btn{padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#0f172a;font-size:1rem;font-weight:700;cursor:pointer;width:100%;}
+  .submit-btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .time-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .time-chip{background:#0f172a;border-radius:8px;padding:8px 12px;font-size:0.75rem;color:#38bdf8;font-weight:600;text-align:center;border:1px solid #1e293b;}
+  .success-screen{display:none;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:20px;}
+  .check-circle{width:80px;height:80px;border-radius:50%;background:rgba(52,211,153,0.15);border:2px solid #34d399;display:flex;align-items:center;justify-content:center;font-size:2rem;}
+  .success-name{font-size:1.2rem;font-weight:700;color:#34d399;}
+  .success-info{font-size:0.82rem;color:#64748b;}
+  .back-btn{background:transparent;border:1px solid #334155;color:#94a3b8;padding:10px 24px;border-radius:10px;font-size:0.82rem;cursor:pointer;margin-top:8px;}
+</style>
+</head>
+<body>
+
+<!-- ════════ ADMIN / QR PAGE ════════ -->
+<div id="admin-page">
+  <div style="text-align:center">
+    <div class="admin-title">QR Attendance System</div>
+    <div class="admin-sub">II B.Com CA-B · 2023–26 · 53 Students</div>
+  </div>
+
+  <div class="qr-box" id="qrcode"></div>
+  <div class="qr-info">Scan this QR code with your phone to mark attendance</div>
+
+  <div class="stat-row">
+    <div class="stat"><div class="n green" id="s-in">0</div><div class="l">IN</div></div>
+    <div class="stat"><div class="n red" id="s-out">0</div><div class="l">OUT</div></div>
+    <div class="stat"><div class="n blue" id="s-total">0</div><div class="l">Total</div></div>
+  </div>
+
+  <span class="label">Google Apps Script URL</span>
+  <input class="url-input" id="script-url" type="url" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveURL(this.value)"/>
+
+  <button class="admin-btn" onclick="generateQR()">Regenerate QR Code</button>
+  <button class="admin-btn outline" onclick="downloadQR()">Download QR as Image</button>
+
+  <div id="log-area" style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:8px;"></div>
+</div>
+
+<!-- ════════ MOBILE FORM PAGE ════════ -->
+<div id="form-page">
+  <div class="form-card" id="main-form">
+    <div class="form-title">Mark Attendance</div>
+    <div class="form-sub">II B.Com CA-B · 2023–26</div>
+
+    <div class="time-row">
+      <div class="time-chip" id="f-date">--</div>
+      <div class="time-chip" id="f-time">--</div>
+    </div>
+
+    <div>
+      <div class="label" style="margin-bottom:8px">Enter your number (1–53)</div>
+      <input class="num-input" id="num-input" type="number" min="1" max="53" placeholder="eg. 7"
+             inputmode="numeric" oninput="lookupNum(this.value)"/>
+    </div>
+
+    <div class="student-box" id="student-box">
+      <span style="color:#475569;font-size:0.82rem">Enter your number above</span>
+    </div>
+
+    <div>
+      <div class="label" style="margin-bottom:8px">Attendance type</div>
+      <div class="type-row">
+        <button class="type-btn sel-in" id="t-in"    onclick="setType('IN')">IN</button>
+        <button class="type-btn"        id="t-out"   onclick="setType('OUT')">OUT</button>
+        <button class="type-btn"        id="t-break" onclick="setType('BREAK')">BREAK</button>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="sub-btn" onclick="submitForm()">Mark Attendance</button>
+    <div id="form-msg" style="font-size:0.75rem;text-align:center;color:#64748b;min-height:18px;"></div>
+  </div>
+
+  <!-- Success screen -->
+  <div class="success-screen" id="success-screen">
+    <div class="check-circle">✓</div>
+    <div class="success-name" id="sc-name">--</div>
+    <div class="success-info" id="sc-info">--</div>
+    <button class="back-btn" onclick="resetForm()">Mark Another</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════
+//  STUDENT DATA (from your Excel)
+// ══════════════════════════════════
+const STUDENTS = {
+  1:"AJAY M", 2:"AKASH K", 3:"AMIRTHA VARSINI S", 4:"ANITHA A", 5:"ANTRIYA RACHEL S",
+  6:"ARUMAI BALAJI M", 7:"ASHWATH B S", 8:"AUGUSTINE P", 9:"BHARANIDHARAN G", 10:"BHARATHI N",
+  11:"BOOMIKA K", 12:"DARSHAN R", 13:"DHAYAVIDHI E", 14:"DIVYA SHRI N", 15:"FAISHA MEHARAJ S",
+  16:"GAUTHAM KRISHNA S", 17:"GNANASEELAN M", 18:"GOGULA ANAND", 19:"GOPALA RAMANAN R", 20:"GOWTHAM S",
+  21:"HAMSAVARTHAN K", 22:"HAREESH RAMANA A R G", 23:"HARIKRISHNAN R", 24:"HARISH R", 25:"HARRIS JEROLD J",
+  26:"HARSHA VARDHAN R", 27:"HASAN J", 28:"IRFAN PATHAN S", 29:"IYYANAR P", 30:"JAGADHISH G",
+  31:"JAYA SANTHI V", 32:"JEREEN HARRY J", 33:"JOHN RICHARD I", 34:"JOSHUA S", 35:"KAMALI L",
+  36:"KARTHIBHAN R", 37:"KAUTHAM J", 38:"KAVIN M", 39:"KEERTHANA D", 40:"KISHORE KUMAR M",
+  41:"KRITHIK ADHARSH S", 42:"LAWRENCE A", 43:"MAHALAKSHMI N", 44:"MAHALAKSHMI S", 45:"MAHENDRAKUMAR M",
+  46:"MANIKANDAN G", 47:"MANIKANDAN K", 48:"MANOJ M", 49:"MICHELLE MERLIN M J", 50:"MOHAMED FAROOK K M",
+  51:"SIBIRAJ R", 52:"MOHAMED RENAS A", 53:"JOSE WILLIAM A"
+};
+
+let currentType = 'IN';
+let scriptURL = localStorage.getItem('att_url') || '';
+let stats = JSON.parse(localStorage.getItem('att_stats') || '{"in":0,"out":0,"total":0}');
+let log = JSON.parse(localStorage.getItem('att_log') || '[]');
+
+// ── Detect which page to show ──
+window.onload = () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mark') === '1') {
+    showFormPage();
+  } else {
+    showAdminPage();
+  }
+};
+
+function showAdminPage() {
+  document.getElementById('admin-page').style.display = 'flex';
+  document.getElementById('form-page').style.display = 'none';
+  if (scriptURL) document.getElementById('script-url').value = scriptURL;
+  updateStats();
+  renderLog();
+  generateQR();
+  setInterval(()=>{}, 1000);
+}
+
+function showFormPage() {
+  document.getElementById('admin-page').style.display = 'none';
+  document.getElementById('form-page').style.display = 'flex';
+  updateFormTime();
+  setInterval(updateFormTime, 1000);
+  // Load script URL from URL param if passed
+  const params = new URLSearchParams(window.location.search);
+  const u = params.get('url');
+  if (u) { scriptURL = decodeURIComponent(u); localStorage.setItem('att_url', scriptURL); }
+  else { scriptURL = localStorage.getItem('att_url') || ''; }
+}
+
+function updateFormTime() {
+  const now = new Date();
+  document.getElementById('f-date').textContent = now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  document.getElementById('f-time').textContent = now.toLocaleTimeString('en-IN',{hour12:true});
+}
+
+// ── QR Generation ──
+function generateQR() {
+  const container = document.getElementById('qrcode');
+  container.innerHTML = '';
+  const base = window.location.href.split('?')[0];
+  const url = scriptURL
+    ? `${base}?mark=1&url=${encodeURIComponent(scriptURL)}`
+    : `${base}?mark=1`;
+  new QRCode(container, { text: url, width: 220, height: 220, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.H });
+}
+
+function saveURL(val) {
+  scriptURL = val.trim();
+  localStorage.setItem('att_url', scriptURL);
+  generateQR();
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#qrcode canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = 'attendance_qr.png';
+  a.href = canvas.toDataURL();
+  a.click();
+}
+
+// ── Student Lookup by Number ──
+function lookupNum(val) {
+  const num = parseInt(val);
+  const box = document.getElementById('student-box');
+  if (!val || isNaN(num)) {
+    box.innerHTML = '<span style="color:#475569;font-size:0.82rem">Enter your number above</span>';
+    return;
+  }
+  const name = STUDENTS[num];
+  if (name) {
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2);
+    box.innerHTML = `
+      <div class="avatar">${initials}</div>
+      <div>
+        <div class="s-name">${name}</div>
+        <div class="s-roll">No. ${num} · II B.Com CA-B</div>
+      </div>`;
+  } else {
+    box.innerHTML = '<span style="color:#f87171;font-size:0.82rem">Number not found. Enter 1 to 53.</span>';
+  }
+}
+
+// ── Attendance Type ──
+function setType(t) {
+  currentType = t;
+  document.getElementById('t-in').className    = 'type-btn' + (t==='IN'    ? ' sel-in'    : '');
+  document.getElementById('t-out').className   = 'type-btn' + (t==='OUT'   ? ' sel-out'   : '');
+  document.getElementById('t-break').className = 'type-btn' + (t==='BREAK' ? ' sel-break' : '');
+}
+
+// ── Submit ──
+async function submitForm() {
+  const num = parseInt(document.getElementById('num-input').value);
+  if (!num || !STUDENTS[num]) {
+    document.getElementById('form-msg').textContent = 'Please enter a valid number (1–53)';
+    return;
+  }
+  const name = STUDENTS[num];
+  const now = new Date();
+  const payload = {
+    rollNo: `CAB${String(num).padStart(3,'0')}`,
+    name: name,
+    slNo: num,
+    type: currentType,
+    date: now.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}),
+    time: now.toLocaleTimeString('en-IN',{hour12:true}),
+    timestamp: now.toISOString()
+  };
+
+  const btn = document.getElementById('sub-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  document.getElementById('form-msg').textContent = '';
+
+  if (scriptURL) {
+    try {
+      const fd = new FormData();
+      Object.entries(payload).forEach(([k,v]) => fd.append(k,v));
+      await fetch(scriptURL, { method:'POST', body:fd });
+    } catch(e) {}
+  }
+
+  // Save locally
+  log.unshift(payload);
+  if (log.length > 200) log = log.slice(0,200);
+  localStorage.setItem('att_log', JSON.stringify(log));
+  stats.total++;
+  if (currentType === 'IN') stats.in++;
+  if (currentType === 'OUT') stats.out++;
+  localStorage.setItem('att_stats', JSON.stringify(stats));
+
+  // Show success
+  document.getElementById('main-form').style.display = 'none';
+  const ss = document.getElementById('success-screen');
+  ss.style.display = 'flex';
+  document.getElementById('sc-name').textContent = name;
+  document.getElementById('sc-info').textContent = `Marked ${currentType} · ${payload.date} ${payload.time}`;
+  btn.disabled = false;
+  btn.textContent = 'Mark Attendance';
+}
+
+function resetForm() {
+  document.getElementById('main-form').style.display = 'flex';
+  document.getElementById('success-screen').style.display = 'none';
+  document.getElementById('num-input').value = '';
+  document.getElementById('student-box').innerHTML = '<span style="color:#475569;font-size:0.82rem">Enter your number above</span>';
+  document.getElementById('form-msg').textContent = '';
+  setType('IN');
+  updateFormTime();
+}
+
+// ── Stats & Log (admin) ──
+function updateStats() {
+  document.getElementById('s-in').textContent    = stats.in;
+  document.getElementById('s-out').textContent   = stats.out;
+  document.getElementById('s-total').textContent = stats.total;
+}
+
+function renderLog() {
+  const area = document.getElementById('log-area');
+  if (!log.length) return;
+  area.innerHTML = '<div style="font-size:0.7rem;color:#475569;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Recent</div>' +
+    log.slice(0,15).map(e=>`
+      <div style="background:#1e293b;border-radius:8px;padding:10px 12px;font-size:0.78rem;border-left:3px solid ${e.type==='IN'?'#34d399':e.type==='OUT'?'#f87171':'#fbbf24'}">
+        <div style="font-weight:600">${e.name}</div>
+        <div style="color:#64748b;font-size:0.7rem">${e.type} · ${e.date} ${e.time}</div>
+      </div>`).join('');
+}
+</script>
+</body>
+</html>
